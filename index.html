@@ -1,265 +1,571 @@
 
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Enchanted Fairy Forest 🧚</title>
-
+<title>Fairy Forest</title>
 <style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: #020803;
-  overflow: hidden;
-  font-family: sans-serif;
-}
-
-.scene {
-  position: relative;
-  width: 100vw;
-  height: 100dvh;
-  overflow: hidden;
-  background: #071008;
-}
-
-#fairy {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  position: absolute;
-  animation: float 9s ease-in-out infinite alternate;
-}
-
-#magic {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.light {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      ellipse at 50% 65%,
-      rgba(255,245,190,.24),
-      transparent 45%
-    ),
-    radial-gradient(
-      ellipse at 80% 70%,
-      rgba(170,255,170,.12),
-      transparent 40%
-    );
-  animation: glow 5s ease-in-out infinite;
-}
-
-.controls {
-  position: fixed;
-  bottom: 20px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  z-index: 10;
-}
-
-button, label {
-  background: #14291c;
-  color: #fff3d1;
-  border: 1px solid #b9c99c;
-  border-radius: 25px;
-  padding: 11px 17px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-input {
-  display: none;
-}
-
-@keyframes float {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.055) translateY(-5px);
-  }
-}
-
-@keyframes glow {
-  0%,100% { opacity: .5; }
-  50% { opacity: 1; }
-}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#07140f}
+canvas{display:block;width:100%;height:100%}
 </style>
 </head>
-
 <body>
-
-<div class="scene">
-
-  <img id="fairy" alt="Enchanted Fairy">
-
-  <div class="light"></div>
-
-  <canvas id="magic"></canvas>
-
-</div>
-
-<div class="controls">
-
-  <label for="photo">انتخاب عکس پری</label>
-  <input type="file" id="photo" accept="image/*">
-
-  <button id="toggle">توقف جادو ✨</button>
-
-</div>
+<canvas id="scene"></canvas>
 
 <script>
+const canvas=document.getElementById("scene");
+const ctx=canvas.getContext("2d");
 
-const fairy = document.getElementById("fairy");
-const picker = document.getElementById("photo");
-const canvas = document.getElementById("magic");
-const ctx = canvas.getContext("2d");
+const W=900,H=900;
+let tick=0;
+let particles=[];
 
-let running = true;
-let animation;
-
-function resize() {
-  const dpr = Math.min(devicePixelRatio || 1, 2);
-
-  canvas.width = innerWidth * dpr;
-  canvas.height = innerHeight * dpr;
-
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+function resize(){
+ const dpr=Math.min(devicePixelRatio||1,2);
+ canvas.width=innerWidth*dpr;
+ canvas.height=innerHeight*dpr;
 }
-
 resize();
-window.addEventListener("resize", resize);
+addEventListener("resize",resize);
 
-// انتخاب همان عکس مرجع
-picker.addEventListener("change", e => {
-  const file = e.target.files[0];
-
-  if (file) {
-    fairy.src = URL.createObjectURL(file);
-  }
-});
-
-// ذرات جادویی
-const colors = [
-  "#fff6ce",
-  "#e5ffd9",
-  "#fff0e9",
-  "#d9ffff",
-  "#e7dcff"
-];
-
-const particles = [];
-
-for (let i = 0; i < 120; i++) {
-  particles.push({
-    x: Math.random() * innerWidth,
-    y: Math.random() * innerHeight,
-    size: .5 + Math.random() * 2.5,
-    speed: .2 + Math.random() * .8,
-    color: colors[
-      Math.floor(Math.random() * colors.length)
-    ],
-    phase: Math.random() * 6.28
-  });
+for(let i=0;i<100;i++){
+ particles.push({
+  x:Math.random()*W,
+  y:Math.random()*H,
+  r:Math.random()*2+0.5,
+  speed:Math.random()*0.6+0.1,
+  phase:Math.random()*6.28
+ });
 }
 
-function animate() {
+function gradient(x1,y1,x2,y2,stops){
+ const g=ctx.createLinearGradient(x1,y1,x2,y2);
+ stops.forEach(s=>g.addColorStop(s[0],s[1]));
+ return g;
+}
 
-  if (!running) return;
+function ellipse(x,y,rx,ry,color,rotation=0){
+ ctx.beginPath();
+ ctx.ellipse(x,y,rx,ry,rotation,0,Math.PI*2);
+ ctx.fillStyle=color;
+ ctx.fill();
+}
 
-  ctx.clearRect(
-    0, 0,
-    innerWidth,
-    innerHeight
+function glow(x,y,r,color){
+ const g=ctx.createRadialGradient(x,y,0,x,y,r);
+ g.addColorStop(0,color);
+ g.addColorStop(1,"transparent");
+ ctx.fillStyle=g;
+ ctx.fillRect(x-r,y-r,r*2,r*2);
+}
+
+function leaf(x,y,size,rotation,color){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.rotate(rotation);
+ ctx.scale(size,size);
+
+ ctx.beginPath();
+ ctx.moveTo(0,0);
+ ctx.quadraticCurveTo(20,-25,48,0);
+ ctx.quadraticCurveTo(20,25,0,0);
+ ctx.fillStyle=color;
+ ctx.fill();
+
+ ctx.beginPath();
+ ctx.moveTo(0,0);
+ ctx.quadraticCurveTo(24,0,46,0);
+ ctx.strokeStyle="rgba(220,230,180,.35)";
+ ctx.stroke();
+ ctx.restore();
+}
+
+function flower(x,y,size,color){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.scale(size,size);
+
+ for(let i=0;i<6;i++){
+  ctx.save();
+  ctx.rotate(i*Math.PI/3);
+  ellipse(0,-9,4,10,color);
+  ctx.restore();
+ }
+ ellipse(0,0,4,4,"#f5d58b");
+ ctx.restore();
+}
+
+/* FOREST */
+
+function forest(){
+ ctx.fillStyle=gradient(0,0,0,H,[
+  [0,"#07140f"],
+  [.5,"#173321"],
+  [1,"#06100c"]
+ ]);
+ ctx.fillRect(0,0,W,H);
+
+ glow(460,350,380,"rgba(174,190,120,.17)");
+ glow(720,180,240,"rgba(220,190,120,.1)");
+
+ // tree trunks
+ for(let i=0;i<13;i++){
+  const x=i*85-30;
+  const width=25+Math.random()*25;
+
+  ctx.beginPath();
+  ctx.moveTo(x,0);
+  ctx.bezierCurveTo(x-25,260,x+35,560,x-8,900);
+  ctx.lineTo(x+width,900);
+  ctx.bezierCurveTo(x+width+20,520,x+width-25,260,x+width,0);
+  ctx.closePath();
+
+  ctx.fillStyle="rgba(4,17,11,.7)";
+  ctx.fill();
+ }
+
+ // branches and leaves
+ for(let i=0;i<35;i++){
+  const x=Math.random()*1000-50;
+  const y=Math.random()*420;
+
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.bezierCurveTo(x+40,y-65,x-30,y-120,x+75,y-190);
+  ctx.strokeStyle="rgba(3,14,9,.9)";
+  ctx.lineWidth=6;
+  ctx.stroke();
+
+  for(let j=0;j<5;j++){
+   leaf(
+    x+Math.random()*100-20,
+    y-Math.random()*140,
+    .6+Math.random()*.5,
+    Math.random()*5,
+    ["#17321f","#24442a","#304b2d"][j%3]
+   );
+  }
+ }
+
+ // flowers on the ground
+ for(let i=0;i<35;i++){
+  const x=Math.random()*900;
+  const y=750+Math.random()*150;
+  leaf(x,y,.7,Math.random()*4,"#385b38");
+  if(i%3===0)flower(x,y,.7,"#d5c4a9");
+ }
+
+ const vignette=ctx.createRadialGradient(450,420,230,450,420,650);
+ vignette.addColorStop(0,"transparent");
+ vignette.addColorStop(1,"rgba(0,0,0,.65)");
+ ctx.fillStyle=vignette;
+ ctx.fillRect(0,0,W,H);
+}
+
+/* FAIRY WINGS */
+
+function wing(x,y,flip,phase,scale=1){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.scale(flip*scale,scale);
+
+ ctx.rotate(Math.sin(tick*.035+phase)*.055);
+
+ const wingPath=()=>{
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-35,-105,-180,-265,-300,-210);
+  ctx.bezierCurveTo(-330,-190,-270,-85,-190,-35);
+  ctx.bezierCurveTo(-115,5,-48,18,0,0);
+  ctx.closePath();
+ };
+
+ wingPath();
+ ctx.fillStyle=gradient(-250,-220,0,0,[
+  [0,"rgba(226,239,222,.04)"],
+  [.45,"rgba(219,232,215,.38)"],
+  [1,"rgba(238,222,190,.12)"]
+ ]);
+ ctx.fill();
+ ctx.strokeStyle="rgba(235,244,225,.8)";
+ ctx.lineWidth=2;
+ ctx.stroke();
+
+ // wing veins
+ ctx.save();
+ wingPath();
+ ctx.clip();
+
+ for(let i=0;i<10;i++){
+  const ex=-35-i*27;
+  const ey=-25-i*17;
+
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.quadraticCurveTo(ex*.5,ey-35,ex,ey);
+  ctx.strokeStyle="rgba(245,247,225,.55)";
+  ctx.lineWidth=1.1;
+  ctx.stroke();
+ }
+
+ for(let i=0;i<6;i++){
+  ctx.beginPath();
+  ctx.moveTo(-40-i*35,-30-i*12);
+  ctx.quadraticCurveTo(-160-i*15,-90-i*12,-235+i*18,-145+i*18);
+  ctx.strokeStyle="rgba(240,245,224,.3)";
+  ctx.lineWidth=.8;
+  ctx.stroke();
+ }
+ ctx.restore();
+
+ for(let i=0;i<12;i++){
+  glow(-30-i*18,-30-i*13,7,"rgba(245,238,205,.18)");
+ }
+
+ ctx.restore();
+}
+
+/* HAIR */
+
+function hair(){
+ const gold=gradient(320,210,570,660,[
+  [0,"#f5dfa0"],
+  [.25,"#bd8c47"],
+  [.5,"#f6dc91"],
+  [.75,"#946331"],
+  [1,"#e9c77a"]
+ ]);
+
+ // long hair silhouette
+ ctx.beginPath();
+ ctx.moveTo(405,278);
+ ctx.bezierCurveTo(330,250,318,330,333,415);
+ ctx.bezierCurveTo(300,520,332,640,290,755);
+ ctx.bezierCurveTo(385,720,405,635,415,555);
+ ctx.bezierCurveTo(500,670,545,735,590,745);
+ ctx.bezierCurveTo(552,640,555,550,530,460);
+ ctx.bezierCurveTo(570,350,520,250,450,245);
+ ctx.closePath();
+ ctx.fillStyle=gold;
+ ctx.fill();
+
+ // individual strands
+ for(let i=0;i<28;i++){
+  const x=350+i*7;
+
+  ctx.beginPath();
+  ctx.moveTo(x,285);
+  ctx.bezierCurveTo(
+   x-55,420,
+   x+Math.sin(i)*25,590,
+   x+Math.cos(i)*55,735
   );
 
-  particles.forEach(p => {
+  ctx.strokeStyle=i%3===0
+   ?"rgba(255,240,185,.65)"
+   :"rgba(95,60,30,.28)";
+  ctx.lineWidth=i%3===0?2:1;
+  ctx.stroke();
+ }
+}
 
-    p.y -= p.speed * .35;
-    p.x += Math.sin(p.phase) * .25;
-    p.phase += .025;
+/* FACE */
 
-    if (p.y < 0) {
-      p.y = innerHeight;
-      p.x = Math.random() * innerWidth;
-    }
+function face(){
+ const skin=gradient(420,280,500,420,[
+  [0,"#f8dfc4"],
+  [.55,"#eac2a2"],
+  [1,"#c98e72"]
+ ]);
 
-    const opacity =
-      .3 + .7 * Math.abs(Math.sin(p.phase));
+ // profile
+ ctx.beginPath();
+ ctx.moveTo(421,292);
+ ctx.quadraticCurveTo(470,265,500,312);
+ ctx.quadraticCurveTo(515,335,501,354);
+ ctx.quadraticCurveTo(519,367,510,375);
+ ctx.quadraticCurveTo(500,382,508,390);
+ ctx.quadraticCurveTo(496,417,465,420);
+ ctx.quadraticCurveTo(425,410,415,370);
+ ctx.closePath();
+ ctx.fillStyle=skin;
+ ctx.fill();
 
-    ctx.globalAlpha = opacity;
+ // nose
+ ctx.beginPath();
+ ctx.moveTo(499,351);
+ ctx.quadraticCurveTo(517,358,508,365);
+ ctx.strokeStyle="#b77e69";
+ ctx.lineWidth=1.5;
+ ctx.stroke();
 
-    ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 12;
+ // lips
+ ctx.beginPath();
+ ctx.moveTo(505,379);
+ ctx.quadraticCurveTo(515,382,506,386);
+ ctx.strokeStyle="#9f5f58";
+ ctx.stroke();
 
-    ctx.beginPath();
+ // eye
+ ctx.beginPath();
+ ctx.moveTo(477,347);
+ ctx.quadraticCurveTo(488,341,496,348);
+ ctx.strokeStyle="#5b4638";
+ ctx.lineWidth=1.5;
+ ctx.stroke();
 
-    ctx.arc(
-      p.x,
-      p.y,
-      p.size,
-      0,
-      Math.PI * 2
-    );
+ ellipse(488,349,2,2,"#43372e");
 
-    ctx.fill();
+ // eyebrow
+ ctx.beginPath();
+ ctx.moveTo(474,337);
+ ctx.quadraticCurveTo(488,329,498,337);
+ ctx.strokeStyle="#79553c";
+ ctx.stroke();
 
-    // درخشش ستاره‌ای
-    if (p.size > 2) {
-      ctx.fillRect(
-        p.x - 5,
-        p.y,
-        10,
-        .7
-      );
+ // ear
+ ellipse(425,370,10,17,"#e5b99b");
+}
 
-      ctx.fillRect(
-        p.x,
-        p.y - 5,
-        .7,
-        10
-      );
-    }
+/* FLOWER CROWN */
 
-  });
+function crown(){
+ for(let i=0;i<10;i++){
+  const x=385+i*13;
+  const y=282-Math.sin(i/9*Math.PI)*25;
 
-  ctx.globalAlpha = 1;
-  ctx.shadowBlur = 0;
+  leaf(x,y,.45,-.6,"#65794a");
 
-  animation = requestAnimationFrame(animate);
+  if(i%2===0){
+   flower(x,y-7,.65,i%4===0?"#f1e3c9":"#d9c4a6");
+  }
+ }
+}
+
+/* DRESS */
+
+function dress(){
+ const cloth=gradient(410,500,530,850,[
+  [0,"#fff9e8"],
+  [.35,"#d9ddcd"],
+  [.7,"#aebca9"],
+  [1,"#718675"]
+ ]);
+
+ // neck
+ ctx.beginPath();
+ ctx.moveTo(430,404);
+ ctx.quadraticCurveTo(437,438,466,454);
+ ctx.lineTo(500,445);
+ ctx.lineTo(480,402);
+ ctx.fillStyle="#e8c2a4";
+ ctx.fill();
+
+ // shoulders and bodice
+ ctx.beginPath();
+ ctx.moveTo(430,430);
+ ctx.quadraticCurveTo(454,448,480,435);
+ ctx.quadraticCurveTo(505,443,526,475);
+ ctx.quadraticCurveTo(510,506,488,526);
+ ctx.lineTo(410,520);
+ ctx.quadraticCurveTo(398,474,430,430);
+ ctx.closePath();
+
+ ctx.fillStyle=gradient(400,430,520,530,[
+  [0,"#fff9e8"],
+  [.5,"#d9d9c8"],
+  [1,"#9fae9a"]
+ ]);
+ ctx.fill();
+
+ // skirt
+ ctx.beginPath();
+ ctx.moveTo(416,500);
+ ctx.quadraticCurveTo(450,520,493,500);
+ ctx.bezierCurveTo(520,580,565,690,620,850);
+ ctx.quadraticCurveTo(480,815,355,855);
+ ctx.bezierCurveTo(388,730,375,600,416,500);
+ ctx.closePath();
+
+ ctx.fillStyle=cloth;
+ ctx.fill();
+ ctx.strokeStyle="rgba(245,238,220,.7)";
+ ctx.lineWidth=2;
+ ctx.stroke();
+
+ // fabric folds
+ for(let i=0;i<15;i++){
+  const x=390+i*12;
+
+  ctx.beginPath();
+  ctx.moveTo(450,520);
+  ctx.bezierCurveTo(
+   x-45,630,
+   x+Math.sin(i)*20,735,
+   x+Math.cos(i)*30,840
+  );
+
+  ctx.strokeStyle=i%2
+   ?"rgba(255,255,240,.35)"
+   :"rgba(82,105,83,.25)";
+  ctx.lineWidth=i%2?2:1.5;
+  ctx.stroke();
+ }
+
+ // neckline
+ ctx.beginPath();
+ ctx.moveTo(407,535);
+ ctx.quadraticCurveTo(452,553,500,535);
+ ctx.strokeStyle="rgba(255,255,238,.7)";
+ ctx.lineWidth=2;
+ ctx.stroke();
+
+ // arm
+ ctx.beginPath();
+ ctx.moveTo(493,456);
+ ctx.quadraticCurveTo(530,478,550,518);
+ ctx.quadraticCurveTo(555,530,545,536);
+ ctx.quadraticCurveTo(529,523,514,510);
+ ctx.lineTo(475,482);
+ ctx.fillStyle="#e8c2a4";
+ ctx.fill();
+}
+
+/* SMALL FAIRY */
+
+function littleFairy(){
+ ctx.save();
+ ctx.translate(735,510);
+ ctx.scale(.48,.48);
+
+ // wings
+ ctx.beginPath();
+ ctx.moveTo(0,0);
+ ctx.quadraticCurveTo(-85,-120,-155,-90);
+ ctx.quadraticCurveTo(-125,-20,-5,18);
+ ctx.closePath();
+ ctx.fillStyle="rgba(220,238,218,.42)";
+ ctx.fill();
+ ctx.strokeStyle="rgba(235,242,220,.7)";
+ ctx.stroke();
+
+ ctx.beginPath();
+ ctx.moveTo(5,0);
+ ctx.quadraticCurveTo(65,-125,130,-85);
+ ctx.quadraticCurveTo(95,-15,8,18);
+ ctx.closePath();
+ ctx.fillStyle="rgba(220,238,218,.42)";
+ ctx.fill();
+ ctx.stroke();
+
+ // head
+ ellipse(0,-28,15,19,"#e8c5a7");
+
+ // hair
+ ctx.beginPath();
+ ctx.moveTo(-12,-43);
+ ctx.quadraticCurveTo(0,-65,18,-40);
+ ctx.quadraticCurveTo(25,-5,5,8);
+ ctx.lineTo(-18,0);
+ ctx.closePath();
+ ctx.fillStyle="#b88a50";
+ ctx.fill();
+
+ // dress
+ ctx.beginPath();
+ ctx.moveTo(-14,-5);
+ ctx.quadraticCurveTo(0,8,15,-4);
+ ctx.lineTo(34,85);
+ ctx.quadraticCurveTo(0,105,-30,82);
+ ctx.closePath();
+ ctx.fillStyle="#e8edda";
+ ctx.fill();
+
+ ctx.restore();
+}
+
+/* FOREGROUND PLANTS */
+
+function foreground(){
+ for(let i=0;i<9;i++){
+  const x=i*115-20;
+
+  ctx.beginPath();
+  ctx.moveTo(x,900);
+  ctx.bezierCurveTo(x-30,810,x+50,770,x+20,700);
+  ctx.strokeStyle="rgba(75,105,61,.7)";
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  for(let j=0;j<4;j++){
+   leaf(x+Math.sin(i+j)*25,820-j*30,.7,
+    Math.random()*4,"#385b38");
+  }
+ }
+}
+
+/* ANIMATION */
+
+function animate(){
+ tick++;
+
+ const dpr=Math.min(devicePixelRatio||1,2);
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ ctx.clearRect(0,0,innerWidth,innerHeight);
+
+ const scale=Math.min(innerWidth/W,innerHeight/H);
+
+ ctx.translate(
+  (innerWidth-W*scale)/2,
+  (innerHeight-H*scale)/2
+ );
+ ctx.scale(scale,scale);
+
+ forest();
+ foreground();
+
+ // wings behind fairy
+ wing(444,390,-1,0,1.03);
+ wing(457,390,1,1,.96);
+
+ ctx.save();
+ ctx.translate(448,420);
+ ctx.scale(.83,.83);
+ wing(0,0,-1,2,.68);
+ wing(8,0,1,3,.68);
+ ctx.restore();
+
+ // fairy
+ hair();
+ face();
+ crown();
+ dress();
+
+ // little fairy
+ littleFairy();
+
+ // floating golden lights
+ particles.forEach(p=>{
+  p.y-=p.speed;
+  p.x+=Math.sin(tick*.012+p.phase)*.25;
+
+  if(p.y<0){
+   p.y=H;
+   p.x=Math.random()*W;
+  }
+
+  const a=.25+.55*(.5+.5*Math.sin(tick*.04+p.phase));
+
+  glow(p.x,p.y,8,`rgba(236,220,151,${a*.2})`);
+  ellipse(p.x,p.y,p.r,p.r,`rgba(255,239,176,${a})`);
+ });
+
+ requestAnimationFrame(animate);
 }
 
 animate();
-
-// توقف و شروع مجدد
-document.getElementById("toggle").onclick = () => {
-
-  running = !running;
-
-  document.getElementById("toggle").textContent =
-    running ? "توقف جادو ✨" : "ادامه جادو ✨";
-
-  if (running) animate();
-  else cancelAnimationFrame(animation);
-
-};
-
 </script>
-
 </body>
 </html>
