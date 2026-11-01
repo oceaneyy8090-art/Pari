@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#030914">
+<title>MERMAID UNDER THE STARS</title>
+
+<style>
+:root{--ink:#030914;--blue:#071c31;--cyan:#9ce9e5;--pearl:#f4eefa;--rose:#d9a9c5;--muted:#9eb8c9}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--pearl);font-family:Tahoma,"Segoe UI",sans-serif}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block}
+#vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 28%,rgba(0,3,12,.2) 75%,rgba(0,2,9,.72) 130%)}
+header{position:fixed;top:0;left:0;right:0;text-align:center;padding:18px 12px 8px;pointer-events:none;text-shadow:0 0 18px #a7dce8}
+header .eyebrow{font:10px/1.4 Georgia,serif;letter-spacing:5px;color:#b9dce5;direction:ltr}
+header h1{font:clamp(17px,3vw,25px)/1.5 Georgia,serif;letter-spacing:3px;margin:4px 0;color:#f1eaf5;direction:ltr;font-weight:400}
+header small{font-size:10px;color:#a9c3cf;letter-spacing:2px}
+#lyric{position:fixed;z-index:2;left:7%;right:7%;top:72%;min-height:76px;text-align:center;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:clamp(18px,3.3vw,30px);font-weight:500;line-height:1.9;color:#fff8ff;text-shadow:0 0 8px #f3d7ef,0 0 22px #d9a9c5,0 2px 8px #00101c;opacity:0;transition:opacity .4s}
+#panel{position:fixed;z-index:5;left:12px;right:12px;bottom:12px;max-width:920px;margin:auto;background:linear-gradient(135deg,rgba(4,19,34,.88),rgba(8,28,44,.72));border:1px solid rgba(177,220,229,.2);border-radius:18px;padding:10px 12px;backdrop-filter:blur(14px);box-shadow:0 12px 50px #0008;max-height:43vh;overflow:auto;scrollbar-width:thin}
+#panel.collapsed{max-height:49px;overflow:hidden}
+#panelTop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+button,.filelabel{border:1px solid rgba(183,222,231,.28);background:rgba(145,199,210,.1);color:#e9f5f7;border-radius:999px;padding:8px 13px;font-size:12px;cursor:pointer}
+button:active,.filelabel:active{background:rgba(177,226,233,.25)}
+button.primary{background:linear-gradient(110deg,#315e75,#7b607d);border-color:#b6d8df}
+input[type=file]{display:none}
+.filelabel{display:inline-flex;align-items:center;gap:6px}
+.track{flex:1;min-width:130px;height:5px;border-radius:5px;background:#ffffff24;overflow:hidden}
+.track>i{display:block;width:0;height:100%;background:linear-gradient(90deg,#83d6d7,#e3b6d1)}
+#time{font:11px monospace;color:#b9d0d9;direction:ltr;min-width:86px;text-align:center}
+.row{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+.row label{font-size:11px;color:#b5ccd6}
+.row input[type=range]{flex:1;min-width:90px;accent-color:#a6dce0}
+.row input[type=number]{width:74px;background:#061421;color:#fff;border:1px solid #547180;border-radius:7px;padding:5px;direction:ltr}
+.hint{font-size:10px;color:#8caab8;margin:8px 2px 0}
+.editor{margin-top:10px;border-top:1px solid #ffffff20;padding-top:9px}
+.editor summary{cursor:pointer;font-size:12px;color:#cde4e9}
+.editor table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.editor td,.editor th{padding:5px 3px;border-bottom:1px solid #ffffff14;text-align:right}
+.editor input{width:65px;max-width:100%;background:#061421;color:white;border:1px solid #456071;border-radius:6px;padding:4px;direction:ltr}
+.editor td:first-child{width:60%}
+.editor button{padding:5px 9px;font-size:10px}
+.toggle{margin-right:auto}
+@media(max-width:560px){
+header{padding-top:12px}
+header h1{letter-spacing:2px}
+#lyric{top:65%;font-size:20px}
+#panel{left:7px;right:7px;bottom:7px;padding:9px;max-height:40vh}
+button,.filelabel{padding:7px 10px;font-size:11px}
+.editor td:first-child{width:52%}
+}
+</style>
+</head>
+
+<body>
+<canvas id="stage"></canvas>
+<div id="vignette"></div>
+
+<header>
+<div class="eyebrow">A DREAM BENEATH THE MOON</div>
+<h1>MERMAID UNDER THE STARS</h1>
+<small>پری دریایی زیر آسمان پرستاره</small>
+</header>
+
+<div id="lyric"></div>
+
+<section id="panel">
+ <div id="panelTop">
+  <label class="filelabel">♫ انتخاب آهنگ
+   <input id="audioFile" type="file" accept="audio/*">
+  </label>
+  <button id="play" class="primary">پخش</button>
+  <button id="pause">توقف</button>
+  <button id="restart">از ابتدا</button>
+  <span id="time">00:00 / 00:00</span>
+  <div class="track"><i id="progress"></i></div>
+  <button id="fold" class="toggle">−</button>
+ </div>
+
+ <div class="row">
+  <label>تراکم ذرات</label>
+  <input id="density" type="range" min="500" max="4200" step="100" value="2200">
+  <label id="densityVal">2200</label>
+  <label>حساسیت صدا</label>
+  <input id="sensitivity" type="range" min="0" max="2" step=".05" value=".8">
+ </div>
+
+ <div class="row">
+  <label class="filelabel">انتخاب عکس مرجع (اختیاری)
+   <input id="photoFile" type="file" accept="image/*">
+  </label>
+  <button id="clearPhoto">حذف عکس</button>
+  <label class="hint">عکس فقط به‌صورت بافت/هاله‌ی کم‌رنگ استفاده می‌شود؛ پری و صحنه همچنان با Canvas انیمیت می‌شوند.</label>
+ </div>
+
+ <details class="editor">
+  <summary>تنظیم زمان شروع و پایان هر خط متن</summary>
+  <div id="timingTable"></div>
+  <div class="row">
+   <button id="autoTiming">تقسیم خودکار بر اساس طول آهنگ</button>
+   <button id="saveTiming">ذخیره زمان‌بندی در همین صفحه</button>
+  </div>
+ </details>
+
+ <div class="hint">برای هماهنگی دقیق، آهنگ را انتخاب کن؛ زمان‌ها بر اساس currentTime پخش‌کننده خوانده می‌شوند. بدون آهنگ، صحنه به‌صورت نمایشی ادامه پیدا می‌کند.</div>
+</section>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+(()=>{
+'use strict';
+
+const canvas=document.getElementById('stage'),
+ctx=canvas.getContext('2d',{alpha:false}),
+audio=document.getElementById('audio');
+
+const $=id=>document.getElementById(id),
+TAU=Math.PI*2,
+rand=(a,b)=>a+Math.random()*(b-a),
+clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),
+lerp=(a,b,t)=>a+(b-a)*t;
+
+const lyrics=[
+'میشه صدات کنم پری دریایی؟',
+'آخه خوشگل‌تر از تو، تو دریا نی',
+'میشه صدام کنی، بهم بگی بیبی',
+'مجنون باشم و تو هم باشی لیلی',
+'کجا میری بچه؟ پیش من تو سیفی',
+'اصلاً بیا بازی با سنگ، بیار من قیچی',
+'من نمی‌گم، خود خدا می‌گه حیفی',
+'دلو ندی به این پسر',
+'چی می‌شه نگاه کنم یه ذره بیشتر؟',
+'آخه ازت نمی‌شه دل کند آسون‌تر',
+'دلم می‌خواد ببینمت هر شب',
+'بشینی روبه‌روم، بخندی تا صبح',
+'میشه صدام کنی، بگی عزیزم',
+'منم بگم فدات بشم، مریضم',
+'تو که می‌خندی، عقلم می‌ره از دست',
+'دلم می‌خواد پیشم بمونی تا آخر'
+];
+
+let timings=[],W=0,H=0,DPR=1,last=0,elapsed=0,
+particles=[],stars=[],shooters=[],bubbles=[],plankton=[],waves=[],
+photo=null,audioURL=null,analyser=null,source=null,frequency=null,
+beat=0,beatSmooth=0,mermaidProgress=0,ending=0,
+lyricIndex=-1,lyricParticles=[],
+lyricCanvas=document.createElement('canvas'),
+lyricCtx=lyricCanvas.getContext('2d'),
+lastLyricBuild=-1;
+
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function resize(){
+DPR=Math.min(devicePixelRatio||1,1.7);
+W=innerWidth;
+H=innerHeight;
+canvas.width=Math.floor(W*DPR);
+canvas.height=Math.floor(H*DPR);
+canvas.style.width=W+'px';
+canvas.style.height=H+'px';
+ctx.setTransform(DPR,0,0,DPR,0,0);
+buildStars();
+buildWaves();
+buildMermaid();
+}
+
+function buildStars(){
+stars=[];
+let n=Math.floor(W*H/3600);
+
+for(let i=0;i<n;i++)
+stars.push({
+x:rand(0,W),
+y:rand(0,H*.58),
+r:rand(.35,1.45),
+a:rand(.25,.95),
+p:rand(0,TAU),
+s:rand(.5,2)
+});
+
+shooters=[];
+
+for(let i=0;i<4;i++)
+shooters.push({
+x:rand(0,W),
+y:rand(0,H*.38),
+t:rand(3,18),
+delay:rand(4,20),
+len:rand(50,120)
+});
+}
+
+function buildWaves(){
+waves=[];
+for(let j=0;j<12;j++)
+waves.push({
+y:H*(.57+j*.045),
+amp:rand(3,13),
+freq:rand(.008,.018),
+speed:rand(.2,.6),
+phase:rand(0,TAU),
+alpha:rand(.08,.25)
+});
+}
+
+function mermaidPoint(u,v){
+let x,y;
+const cx=W*.53,cy=H*.58,
+scale=Math.min(W/900,H/650);
+let spine;
+
+if(u<.48){
+let q=u/.48;
+spine={
+x:cx+Math.sin(q*2.3)*18*scale,
+y:cy+lerp(105,-5,q)*scale
+};
+let width=(Math.sin(q*Math.PI)*.22+.055)*scale*110;
+return{x:spine.x+v*width,y:spine.y};
+}
+
+let q=(u-.48)/.52;
+spine={
+x:cx+Math.sin(q*1.1)*12*scale,
+y:cy-5*scale-q*155*scale
+};
+let width=(Math.sin(q*Math.PI)*.14+.025)*scale*95;
+return{x:spine.x+v*width,y:spine.y};
+}
+
+function buildMermaid(){
+particles=[];
+const count=+((''+$('density')?.value)||2200);
+let scale=Math.min(W/900,H/650);
+
+for(let i=0;i<count;i++){
+let u=Math.random(),v=rand(-1,1),p=mermaidPoint(u,v);
+let x=p.x,y=p.y;
+
+if(u>.86&&Math.random()<.48){
+let t=Math.random();
+x=W*.53+Math.sin(t*5+Math.random())*65*scale+rand(-8,8);
+y=H*.58-150*scale-t*150*scale;
+}
+
+if(u<.17&&Math.random()<.58){
+let side=Math.random()<.5?-1:1;
+x=W*.53+side*rand(0,90)*scale;
+y=H*.58+rand(85,160)*scale;
+}
+
+particles.push({
+x:rand(-W,W*2),
+y:rand(-H,H*2),
+tx:x,ty:y,
+ox:rand(-20,20),
+oy:rand(-20,20),
+r:rand(.45,1.65),
+a:rand(.35,.95),
+phase:rand(0,TAU),
+speed:rand(.4,1.4),
+h:Math.random()
+});
+}
+}
+
+function drawSky(t){
+let g=ctx.createLinearGradient(0,0,0,H*.68);
+g.addColorStop(0,'#020611');
+g.addColorStop(.6,'#07182b');
+g.addColorStop(1,'#12384a');
+ctx.fillStyle=g;
+ctx.fillRect(0,0,W,H);
+
+let glow=ctx.createRadialGradient(
+W*.72,H*.26,2,W*.72,H*.26,H*.48
+);
+glow.addColorStop(0,'rgba(139,174,195,.14)');
+glow.addColorStop(1,'rgba(8,24,44,0)');
+ctx.fillStyle=glow;
+ctx.fillRect(0,0,W,H*.7);
+
+for(const s of stars){
+let a=s.a*(.55+.45*Math.sin(t*s.s+s.p));
+ctx.globalAlpha=a;
+ctx.fillStyle='#eaf7ff';
+ctx.beginPath();
+ctx.arc(s.x,s.y,s.r,0,TAU);
+ctx.fill();
+
+if(s.r>1.15){
+ctx.strokeStyle='rgba(220,244,255,.35)';
+ctx.lineWidth=.5;
+ctx.beginPath();
+ctx.moveTo(s.x-3,s.y);
+ctx.lineTo(s.x+3,s.y);
+ctx.moveTo(s.x,s.y-3);
+ctx.lineTo(s.x,s.y+3);
+ctx.stroke();
+}
+}
+ctx.globalAlpha=1;
+
+ctx.strokeStyle='rgba(185,220,234,.12)';
+ctx.lineWidth=.7;
+let pts=[
+[.12,.18],[.16,.13],[.21,.17],[.24,.1],
+[.31,.16],[.78,.12],[.83,.17],[.88,.11],[.91,.2]
+];
+
+for(let i=0;i<pts.length-1;i++){
+if(i===4)continue;
+ctx.beginPath();
+ctx.moveTo(pts[i][0]*W,pts[i][1]*H);
+ctx.lineTo(pts[i+1][0]*W,pts[i+1][1]*H);
+ctx.stroke();
+}
+
+const mx=W*.72,my=H*.22,mr=Math.min(W,H)*.055;
+let mg=ctx.createRadialGradient(mx,my,mr*.2,mx,my,mr*2.8);
+mg.addColorStop(0,'rgba(240,235,226,.2)');
+mg.addColorStop(1,'rgba(240,235,226,0)');
+ctx.fillStyle=mg;
+ctx.beginPath();
+ctx.arc(mx,my,mr*2.8,0,TAU);
+ctx.fill();
+
+ctx.fillStyle='#e7e9e5';
+ctx.shadowColor='#dceaf0';
+ctx.shadowBlur=28;
+ctx.beginPath();
+ctx.arc(mx,my,mr,0,TAU);
+ctx.fill();
+ctx.shadowBlur=0;
+
+ctx.fillStyle='#b8c5ca';
+ctx.globalAlpha=.22;
+ctx.beginPath();
+ctx.arc(mx+mr*.27,my-mr*.1,mr*.84,0,TAU);
+ctx.fill();
+ctx.globalAlpha=1;
+
+for(let s of shooters){
+s.t-=.016;
+if(s.t<0){
+s.x=rand(0,W);
+s.y=rand(0,H*.36);
+s.t=s.delay;
+}
+if(s.t<.55){
+let p=(.55-s.t)/.55;
+ctx.strokeStyle=`rgba(220,242,255,${Math.sin(p*Math.PI)*.7})`;
+ctx.lineWidth=1;
+ctx.beginPath();
+ctx.moveTo(s.x,s.y);
+ctx.lineTo(s.x-s.len*p,s.y+s.len*.32*p);
+ctx.stroke();
+}
+}
+}
+
+function drawOcean(t,energy){
+let horizon=H*.57;
+let g=ctx.createLinearGradient(0,horizon,0,H);
+g.addColorStop(0,'#0b2b40');
+g.addColorStop(.25,'#062238');
+g.addColorStop(1,'#010a18');
+ctx.fillStyle=g;
+ctx.fillRect(0,horizon,W,H-horizon);
+
+let mx=W*.72;
+
+for(let i=0;i<100;i++){
+let yy=horizon+8+i*(H-horizon-8)/100;
+let spread=5+(yy-horizon)*.16;
+let xx=mx+Math.sin(t*1.2+i*.19)*spread*.45+rand(-.5,.5);
+let a=(1-i/110)*(.12+.14*Math.sin(t*2+i*.7)**2);
+ctx.fillStyle=`rgba(205,228,231,${a})`;
+ctx.fillRect(xx-spread*.18,yy,rand(2,spread*.4),rand(.5,1.5));
+}
+
+for(const w of waves){
+ctx.beginPath();
+for(let x=0;x<=W;x+=8){
+let y=w.y+Math.sin(x*w.freq+t*w.speed+w.phase)*(w.amp+energy*3)+Math.sin(x*.004-t*.5)*4;
+if(x===0)ctx.moveTo(x,y);
+else ctx.lineTo(x,y);
+}
+ctx.strokeStyle=`rgba(116,199,207,${w.alpha+energy*.035})`;
+ctx.lineWidth=.8;
+ctx.stroke();
+}
+
+for(let i=0;i<6;i++){
+let x=W*(.08+i*.17)+Math.sin(t*.22+i)*28;
+let y=H*.82+Math.sin(t*.3+i*2)*H*.04;
+let r=H*(.08+.025*Math.sin(t+i));
+let cg=ctx.createRadialGradient(x,y,0,x,y,r);
+cg.addColorStop(0,'rgba(60,188,187,.09)');
+cg.addColorStop(1,'rgba(40,140,160,0)');
+ctx.fillStyle=cg;
+ctx.beginPath();
+ctx.arc(x,y,r,0,TAU);
+ctx.fill();
+}
+}
+
+function drawMermaid(t,progress,energy){
+if(progress<=0)return;
+
+const cx=W*.53,cy=H*.58,
+scale=Math.min(W/900,H/650),
+fade=clamp(progress*2.2,0,1)*(1-ending*.95);
+
+ctx.save();
+ctx.globalAlpha=fade;
+
+const bob=Math.sin(t*.75)*5*scale;
+ctx.translate(0,bob);
+
+for(let k=0;k<24;k++){
+let x0=cx+rand(-15,15)*scale,
+y0=cy-115*scale;
+
+ctx.beginPath();
+ctx.moveTo(x0,y0);
+
+let sway=Math.sin(t*.7+k*.42)*35*scale;
+
+ctx.bezierCurveTo(
+x0-45*scale+sway,y0-65*scale,
+x0+65*scale+sway,y0-130*scale,
+x0+rand(-100,20)*scale+sway,y0-195*scale
+);
+
+ctx.strokeStyle=k%4===0?'rgba(222,174,202,.46)':'rgba(164,222,225,.35)';
+ctx.lineWidth=rand(.45,1.1)*scale;
+ctx.stroke();
+}
+
+ctx.beginPath();
+ctx.moveTo(cx-12*scale,cy-125*scale);
+ctx.bezierCurveTo(cx-35*scale,cy-100*scale,cx-29*scale,cy-65*scale,cx-14*scale,cy-38*scale);
+ctx.bezierCurveTo(cx-5*scale,cy-5*scale,cx-24*scale,cy+48*scale,cx-16*scale,cy+96*scale);
+ctx.bezierCurveTo(cx+3*scale,cy+145*scale,cx+42*scale,cy+158*scale,cx+65*scale,cy+186*scale);
+ctx.bezierCurveTo(cx+36*scale,cy+138*scale,cx+30*scale,cy+105*scale,cx+21*scale,cy+67*scale);
+ctx.bezierCurveTo(cx+10*scale,cy+25*scale,cx+24*scale,cy-9*scale,cx+19*scale,cy-43*scale);
+ctx.bezierCurveTo(cx+18*scale,cy-75*scale,cx+18*scale,cy-111*scale,cx+10*scale,cy-126*scale);
+ctx.closePath();
+
+let body=ctx.createLinearGradient(cx-30,cy-100,cx+50,cy+150);
+body.addColorStop(0,'rgba(246,214,224,.56)');
+body.addColorStop(.55,'rgba(137,213,218,.34)');
+body.addColorStop(1,'rgba(65,159,177,.45)');
+ctx.fillStyle=body;
+ctx.shadowColor='#9ce9e5';
+ctx.shadowBlur=20;
+ctx.fill();
+ctx.shadowBlur=0;
+
+ctx.beginPath();
+ctx.moveTo(cx-15*scale,cy+95*scale);
+ctx.quadraticCurveTo(cx-75*scale,cy+150*scale,cx-98*scale,cy+204*scale);
+ctx.quadraticCurveTo(cx-40*scale,cy+193*scale,cx+5*scale,cy+143*scale);
+ctx.quadraticCurveTo(cx+28*scale,cy+198*scale,cx+91*scale,cy+212*scale);
+ctx.quadraticCurveTo(cx+60*scale,cy+145*scale,cx+20*scale,cy+94*scale);
+ctx.closePath();
+ctx.fillStyle='rgba(112,204,208,.26)';
+ctx.fill();
+ctx.strokeStyle='rgba(213,174,204,.65)';
+ctx.lineWidth=1.1;
+ctx.stroke();
+
+ctx.beginPath();
+ctx.ellipse(cx,cy-143*scale,15*scale,22*scale,-.12,0,TAU);
+ctx.fillStyle='rgba(246,220,224,.72)';
+ctx.fill();
+
+ctx.beginPath();
+ctx.moveTo(cx-13*scale,cy-122*scale);
+ctx.quadraticCurveTo(cx,cy-140*scale,cx+14*scale,cy-121*scale);
+ctx.strokeStyle='rgba(230,190,211,.8)';
+ctx.lineWidth=5*scale;
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(cx-10*scale,cy-115*scale);
+ctx.quadraticCurveTo(cx-50*scale,cy-87*scale,cx-62*scale,cy-45*scale);
+ctx.moveTo(cx+10*scale,cy-115*scale);
+ctx.quadraticCurveTo(cx+44*scale,cy-91*scale,cx+55*scale,cy-62*scale);
+ctx.strokeStyle='rgba(237,201,220,.55)';
+ctx.lineWidth=3*scale;
+ctx.stroke();
+
+for(const p of particles){
+let drift=Math.sin(t*p.speed+p.phase)*2.8*scale;
+let x=lerp(p.x,p.tx,clamp(progress*1.25,0,1))+drift;
+let y=lerp(p.y,p.ty,clamp(progress*1.25,0,1))+Math.cos(t*.7+p.phase)*2*scale;
+let alpha=p.a*fade*(.65+.35*Math.sin(t*1.8+p.phase));
+
+ctx.globalAlpha=alpha;
+ctx.fillStyle=p.h<.17?'#e8b9d0':p.h<.4?'#d9eef0':p.h<.7?'#8ed9dc':'#f8eefa';
+ctx.beginPath();
+ctx.arc(x,y,p.r*scale*(p.h<.17?1.25:1),0,TAU);
+ctx.fill();
+}
+
+for(let row=0;row<9;row++)
+for(let col=-3;col<=3;col++){
+let x=cx+col*7*scale+Math.sin(t+row)*2*scale;
+let y=cy+row*10*scale+30*scale;
+ctx.strokeStyle=`rgba(231,190,215,${.18+.12*Math.sin(t*2+row+col)})`;
+ctx.lineWidth=.65;
+ctx.beginPath();
+ctx.arc(x,y,4*scale,.1,Math.PI-.1);
+ctx.stroke();
+}
+
+ctx.restore();
+}
+
+function spawnAmbient(){
+if(Math.random()<.16)
+bubbles.push({
+x:rand(0,W),y:H+8,r:rand(1,3),
+v:rand(12,34),a:rand(.15,.5),p:rand(0,TAU)
+});
+
+if(Math.random()<.3)
+plankton.push({
+x:rand(0,W),y:rand(H*.58,H),
+vx:rand(-5,5),vy:rand(-12,-2),
+life:rand(2,6),r:rand(.4,1.4),a:rand(.2,.8)
+});
+}
+
+function drawAmbient(dt,t){
+spawnAmbient();
+
+for(let i=bubbles.length-1;i>=0;i--){
+let b=bubbles[i];
+b.y-=b.v*dt;
+b.x+=Math.sin(t+b.p)*9*dt;
+ctx.strokeStyle=`rgba(167,225,231,${b.a})`;
+ctx.lineWidth=.7;
+ctx.beginPath();
+ctx.arc(b.x,b.y,b.r,0,TAU);
+ctx.stroke();
+if(b.y<-10)bubbles.splice(i,1);
+}
+
+for(let i=plankton.length-1;i>=0;i--){
+let p=plankton[i];
+p.x+=p.vx*dt;
+p.y+=p.vy*dt;
+p.life-=dt;
+ctx.globalAlpha=p.a*clamp(p.life,0,1);
+ctx.fillStyle='#9ce9e5';
+ctx.shadowColor='#8be8e4';
+ctx.shadowBlur=8;
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.r,0,TAU);
+ctx.fill();
+ctx.shadowBlur=0;
+if(p.life<=0)plankton.splice(i,1);
+}
+ctx.globalAlpha=1;
+}
+
+function getAudioEnergy(){
+if(!analyser)return 0;
+analyser.getByteFrequencyData(frequency);
+let sum=0;
+for(let i=2;i<Math.min(28,frequency.length);i++)
+sum+=frequency[i];
+return sum/(Math.min(28,frequency.length)-2)/255;
+}
+
+function makeLyrics(){
+const duration=audio.duration&&isFinite(audio.duration)?audio.duration:lyrics.length*4.2;
+timings=lyrics.map((text,i)=>({
+text,
+start:duration*i/lyrics.length,
+end:duration*(i+1)/lyrics.length-.18
+}));
+renderTiming();
+}
+
+function renderTiming(){
+const holder=$('timingTable');
+holder.innerHTML='';
+let table=document.createElement('table');
+table.innerHTML='<thead><tr><th>متن</th><th>شروع (ثانیه)</th><th>پایان (ثانیه)</th></tr></thead>';
+
+let body=document.createElement('tbody');
+
+timings.forEach((item,i)=>{
+let tr=document.createElement('tr'),
+td=document.createElement('td');
+td.textContent=item.text;
+tr.appendChild(td);
+
+for(let key of ['start','end']){
+let cell=document.createElement('td'),
+inp=document.createElement('input');
+inp.type='number';
+inp.min=0;
+inp.step='.1';
+inp.value=item[key].toFixed(1);
+inp.addEventListener('change',()=>{
+timings[i][key]=Math.max(0,+inp.value||0);
+});
+cell.appendChild(inp);
+tr.appendChild(cell);
+}
+
+body.appendChild(tr);
+});
+
+table.appendChild(body);
+holder.appendChild(table);
+}
+
+function activeLyric(time){
+let idx=timings.findIndex(v=>time>=v.start&&time<=v.end);
+if(idx!==lyricIndex){
+lyricIndex=idx;
+if(idx>=0)buildLyricParticles(timings[idx].text);
+else lyricParticles=[];
+}
+}
+
+function buildLyricParticles(text){
+lastLyricBuild=performance.now();
+lyricCanvas.width=Math.min(1100,W*1.5);
+lyricCanvas.height=150;
+let c=lyricCtx;
+c.clearRect(0,0,lyricCanvas.width,150);
+c.direction='rtl';
+c.textAlign='center';
+c.textBaseline='middle';
+let size=Math.min(42,Math.max(22,W*.045));
+c.font=`600 ${size}px Tahoma, sans-serif`;
+c.fillStyle='white';
+c.fillText(text,lyricCanvas.width/2,75,lyricCanvas.width-30);
+
+let data=c.getImageData(0,0,lyricCanvas.width,150).data;
+lyricParticles=[];
+let step=W<600?4:3;
+
+for(let y=0;y<150;y+=step)
+for(let x=0;x<lyricCanvas.width;x+=step){
+if(data[(y*lyricCanvas.width+x)*4+3]>100){
+let tx=x/lyricCanvas.width*W,
+ty=H*.73+(y-75)*.72;
+
+lyricParticles.push({
+x:rand(0,W),y:rand(H*.4,H),
+tx,ty,r:rand(.5,1.35),p:rand(0,TAU)
+});
+}
+}
+}
+
+function drawLyric(time,t){
+activeLyric(time);
+let el=$('lyric');
+
+if(lyricIndex<0){
+el.style.opacity=0;
+return;
+}
+
+let item=timings[lyricIndex],
+fadeIn=clamp((time-item.start)/.55,0,1),
+fadeOut=clamp((item.end-time)/.65,0,1),
+opacity=Math.min(fadeIn,fadeOut);
+
+el.style.opacity=opacity.toFixed(2);
+
+for(const p of lyricParticles){
+let k=clamp((performance.now()-lastLyricBuild)/650,0,1),
+scatter=(1-opacity)*24;
+
+let x=lerp(p.x,p.tx,k)+Math.sin(t*2+p.p)*scatter,
+y=lerp(p.y,p.ty,k)+Math.cos(t*1.7+p.p)*scatter;
+
+ctx.globalAlpha=opacity*(.65+.35*Math.sin(t*3+p.p));
+ctx.fillStyle=p.p%3<1?'#fff8ff':'#e8bdd7';
+ctx.shadowColor='#e5b9d4';
+ctx.shadowBlur=8;
+ctx.beginPath();
+ctx.arc(x,y,p.r,0,TAU);
+ctx.fill();
+}
+ctx.shadowBlur=0;
+ctx.globalAlpha=1;
+}
+
+function drawPhoto(){
+if(!photo)return;
+ctx.save();
+ctx.globalAlpha=.12;
+let s=Math.max(W/photo.width,H/photo.height),
+w=photo.width*s,h=photo.height*s;
+ctx.drawImage(photo,(W-w)/2,(H-h)/2,w,h);
+ctx.restore();
+}
+
+function frame(now){
+let dt=Math.min(.04,(now-last)/1000||.016);
+last=now;
+elapsed+=dt;
+let t=elapsed;
+let time=audio.src?audio.currentTime:elapsed;
+let energy=getAudioEnergy()*+$('sensitivity').value;
+beatSmooth=lerp(beatSmooth,energy,.12);
+let energyNow=beatSmooth;
+
+ctx.clearRect(0,0,W,H);
+drawSky(t);
+drawOcean(t,energyNow);
+drawPhoto();
+
+let total=audio.duration&&isFinite(audio.duration)?audio.duration:Math.max(65,lyrics.length*4.2);
+let progress=audio.src?clamp(time/total,0,1):clamp(elapsed/20,0,1);
+
+mermaidProgress=clamp((progress-.04)/.42,0,1);
+ending=clamp((progress-.91)/.09,0,1);
+
+drawMermaid(t,mermaidProgress,energyNow);
+drawAmbient(dt,t);
+drawLyric(time,t);
+
+if(audio.src&&audio.duration){
+$('time').textContent=fmt(audio.currentTime)+' / '+fmt(audio.duration);
+$('progress').style.width=(audio.currentTime/audio.duration*100)+'%';
+}
+
+requestAnimationFrame(frame);
+}
+
+function fmt(s){
+if(!isFinite(s))return'00:00';
+let m=Math.floor(s/60),sec=Math.floor(s%60);
+return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+}
+
+$('audioFile').addEventListener('change',e=>{
+let f=e.target.files[0];
+if(!f)return;
+
+if(audioURL)URL.revokeObjectURL(audioURL);
+audioURL=URL.createObjectURL(f);
+audio.src=audioURL;
+audio.load();
+
+audio.onloadedmetadata=()=>{
+makeLyrics();
+$('time').textContent='00:00 / '+fmt(audio.duration);
+};
+});
+
+$('play').onclick=()=>{
+if(!audio.src){
+$('audioFile').click();
+return;
+}
+
+if(!analyser){
+try{
+let AC=window.AudioContext||window.webkitAudioContext;
+if(AC){
+let ac=new AC();
+analyser=ac.createAnalyser();
+analyser.fftSize=128;
+frequency=new Uint8Array(analyser.frequencyBinCount);
+source=ac.createMediaElementSource(audio);
+source.connect(analyser);
+analyser.connect(ac.destination);
+}
+}catch(e){
+console.warn(e);
+}
+}
+
+audio.play().catch(()=>{});
+};
+
+$('pause').onclick=()=>audio.pause();
+
+$('restart').onclick=()=>{
+if(audio.src){
+audio.currentTime=0;
+audio.play().catch(()=>{});
+}else{
+elapsed=0;
+}
+};
+
+$('density').addEventListener('input',e=>{
+$('densityVal').textContent=e.target.value;
+});
+
+$('density').addEventListener('change',buildMermaid);
+
+$('fold').onclick=()=>{
+$('panel').classList.toggle('collapsed');
+$('fold').textContent=$('panel').classList.contains('collapsed')?'+':'−';
+};
+
+$('autoTiming').onclick=()=>makeLyrics();
+
+$('saveTiming').onclick=()=>{
+try{
+localStorage.setItem('mermaidTimings',JSON.stringify(timings));
+}catch(e){}
+};
+
+$('photoFile').addEventListener('change',e=>{
+let f=e.target.files[0];
+if(!f)return;
+let img=new Image();
+img.onload=()=>photo=img;
+img.src=URL.createObjectURL(f);
+});
+
+$('clearPhoto').onclick=()=>{
+photo=null;
+$('photoFile').value='';
+};
+
+window.addEventListener('resize',resize);
+resize();
+makeLyrics();
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
